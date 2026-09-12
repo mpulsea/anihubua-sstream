@@ -34,7 +34,11 @@ jobs:
       - name: Build repository
         run: |
           npm install -g skystream-cli
+
+          cp anihub/plugin.js /tmp/anihub-plugin.js
+          cat anihub/recommendations.js >> anihub/plugin.js
           skystream deploy -u https://raw.githubusercontent.com/${{ github.repository }}/main
+          mv /tmp/anihub-plugin.js anihub/plugin.js
 
           VERSION=$(node -p "require('./anihub/plugin.json').version")
 
