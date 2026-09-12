@@ -22,3 +22,5 @@ Current plugin version: **1**.
 2. Встановити **AniHub UA**.
 3. Перевірити Home -> Search -> відкриття тайтлу -> список серій -> запуск серії.
 4. Для першого тесту краще взяти тайтл з Fenix або ASHDI та кількома серіями.
+
+Build trigger: v1 initial iPhone test.
