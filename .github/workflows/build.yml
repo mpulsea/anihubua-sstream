@@ -1,0 +1,69 @@
+name: Build AniHub Repository
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'dist/**'
+      - 'repo.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: anihub-build-main
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Build repository
+        run: |
+          npm install -g skystream-cli
+          skystream deploy -u https://raw.githubusercontent.com/${{ github.repository }}/main
+
+          VERSION=$(node -p "require('./anihub/plugin.json').version")
+
+          find dist -maxdepth 1 -type f -name 'com.anva.anihub-v*.sky' -delete
+          rm -rf anihub/.build
+
+          cp dist/com.anva.anihub.sky "dist/com.anva.anihub-v${VERSION}.sky"
+
+          node - <<'NODE'
+          const fs = require('fs');
+          const version = require('./anihub/plugin.json').version;
+          const packageUrl = `https://raw.githubusercontent.com/${process.env.GITHUB_REPOSITORY}/main/dist/com.anva.anihub-v${version}.sky`;
+          const file = 'dist/plugins.json';
+          const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+          for (const plugin of data) {
+            if (plugin.packageName === 'com.anva.anihub') {
+              plugin.version = version;
+              plugin.url = packageUrl;
+            }
+          }
+          fs.writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
+          NODE
+
+      - name: Commit generated files
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+            exit 0
+          fi
+          git commit -m "chore: build AniHub repository [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
