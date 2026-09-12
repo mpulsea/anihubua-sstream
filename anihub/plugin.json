@@ -1,0 +1,16 @@
+{
+  "packageName": "com.anva.anihub",
+  "name": "AniHub UA",
+  "version": 1,
+  "baseUrl": "https://anihub.in.ua",
+  "description": "AniHub - українське аніме для SkyStream",
+  "authors": [
+    "AnVa / ChatGPT port"
+  ],
+  "languages": [
+    "uk"
+  ],
+  "categories": [
+    "Anime"
+  ]
+}
