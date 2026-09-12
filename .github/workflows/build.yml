@@ -36,6 +36,22 @@ jobs:
           npm install -g skystream-cli
 
           cp anihub/plugin.js /tmp/anihub-plugin.js
+
+          # iOS/FENIX: SkyStream's native player can fail even when the HLS probe
+          # succeeds. Route final FENIX media through SkyStream's byte proxy so
+          # playback does not depend on AVPlayer forwarding provider headers.
+          node - <<'NODE'
+          const fs = require('fs');
+          const file = 'anihub/plugin.js';
+          let s = fs.readFileSync(file, 'utf8');
+          s = s.replace(/AniHub v14/g, 'AniHub v15').replace(/V14 /g, 'V15 ');
+          const from = "new StreamResult({url:u,source:'V15 '+label,headers:headers(ref)})";
+          const to = "new StreamResult({url:(label.indexOf('FENIX')===0?('MAGIC_PROXY_v1'+btoa(u)):u),source:'V15 '+label,headers:(label.indexOf('FENIX')===0?{}:headers(ref))})";
+          if (!s.includes(from)) throw new Error('FENIX StreamResult patch target not found');
+          s = s.replace(from, to);
+          fs.writeFileSync(file, s);
+          NODE
+
           cat anihub/recommendations.js >> anihub/plugin.js
           skystream deploy -u https://raw.githubusercontent.com/${{ github.repository }}/main
           mv /tmp/anihub-plugin.js anihub/plugin.js
