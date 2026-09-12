@@ -37,18 +37,27 @@ jobs:
 
           cp anihub/plugin.js /tmp/anihub-plugin.js
 
-          # iOS/FENIX: SkyStream's native player can fail even when the HLS probe
-          # succeeds. Route final FENIX media through SkyStream's byte proxy so
-          # playback does not depend on AVPlayer forwarding provider headers.
+          # iOS/FENIX v16: fetch the real HLS playlist inside the plugin, choose the
+          # best variant, absolutize every segment/key/map URL and proxy each byte
+          # resource. This avoids AVPlayer resolving relative paths against the
+          # local proxy URL and avoids relying on it to forward provider headers.
           node - <<'NODE'
           const fs = require('fs');
           const file = 'anihub/plugin.js';
           let s = fs.readFileSync(file, 'utf8');
-          s = s.replace(/AniHub v14/g, 'AniHub v15').replace(/V14 /g, 'V15 ');
-          const from = "new StreamResult({url:u,source:'V15 '+label,headers:headers(ref)})";
-          const to = "new StreamResult({url:(label.indexOf('FENIX')===0?('MAGIC_PROXY_v1'+btoa(u)):u),source:'V15 '+label,headers:(label.indexOf('FENIX')===0?{}:headers(ref))})";
-          if (!s.includes(from)) throw new Error('FENIX StreamResult patch target not found');
-          s = s.replace(from, to);
+          s = s.replace(/AniHub v14/g, 'AniHub v16').replace(/V14 /g, 'V16 ');
+
+          const needle = "async function addChecked(out,u,label,ref,diag){u=dec(String(u||'')).trim().replace(/\\\\\\//g,'/');var p=await probe(u,ref);diag.push(label+' '+host(u)+' p='+p.status+' '+p.why);if(p.ok)out.push(new StreamResult({url:u,source:'V16 '+label,headers:headers(ref)}))}";
+
+          const helper = String.raw`function b64ascii(s){return btoa(String(s||'').replace(/[^\x00-\xFF]/g,''))}
+function magicByte(u){return'MAGIC_PROXY_v1'+b64ascii(u)}
+function playlistAbs(u,base){try{return new URL(dec(u),base).toString()}catch(e){return u}}
+function rewriteMediaPlaylist(body,base){var ls=String(body||'').split(/\r?\n/),o=[];for(var i=0;i<ls.length;i++){var line=ls[i];if(!line){o.push(line);continue}if(line.charAt(0)==='#'){line=line.replace(/URI=(['"])(.*?)\1/g,function(_,q,v){return'URI='+q+magicByte(playlistAbs(v,base))+q});o.push(line);continue}o.push(magicByte(playlistAbs(line.trim(),base)))}return o.join('\n')}
+async function fenixMagic(u,ref,diag){var r=await raw(u,H(ref,'application/vnd.apple.mpegurl,application/x-mpegURL,text/plain,*/*')),body=String(r.body||''),base=u;if(body.indexOf('#EXTM3U')<0)return magicByte(u);var ls=body.split(/\r?\n/),best=null;for(var i=0;i<ls.length;i++){if(/^#EXT-X-STREAM-INF:/i.test(ls[i])){var bw=(ls[i].match(/BANDWIDTH=(\d+)/i)||[])[1],j=i+1;while(j<ls.length&&(!ls[j]||ls[j].charAt(0)==='#'))j++;if(j<ls.length){var cand={u:playlistAbs(ls[j].trim(),u),bw:parseInt(bw||'0',10)||0};if(!best||cand.bw>best.bw)best=cand}}}if(best){var vr=await raw(best.u,H(ref,'application/vnd.apple.mpegurl,application/x-mpegURL,text/plain,*/*'));if(String(vr.body||'').indexOf('#EXTM3U')>=0){body=String(vr.body);base=best.u;diag.push('FENIX variant '+host(best.u)+' bw='+best.bw)}}var rewritten=rewriteMediaPlaylist(body,base);diag.push('FENIX magic media bytes='+rewritten.length);return'magic_m3u8:'+b64ascii(rewritten)}
+async function addChecked(out,u,label,ref,diag){u=dec(String(u||'')).trim().replace(/\\\//g,'/');var p=await probe(u,ref);diag.push(label+' '+host(u)+' p='+p.status+' '+p.why);if(p.ok){var finalUrl=label.indexOf('FENIX')===0?await fenixMagic(u,ref,diag):u;out.push(new StreamResult({url:finalUrl,source:'V16 '+label,headers:label.indexOf('FENIX')===0?{}:headers(ref)}))}}`;
+
+          if (!s.includes(needle)) throw new Error('v16 addChecked patch target not found');
+          s = s.replace(needle, helper);
           fs.writeFileSync(file, s);
           NODE
 
