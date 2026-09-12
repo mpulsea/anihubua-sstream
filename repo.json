@@ -2,7 +2,7 @@
   "name": "AniHub UA",
   "packageName": "com.anva.anihub.repo",
   "description": "Український AniHub provider для SkyStream",
-  "manifestVersion": 1,
+  "manifestVersion": 2,
   "pluginLists": [
     "https://raw.githubusercontent.com/mpulsea/anihubua-sstream/main/dist/plugins.json"
   ]
