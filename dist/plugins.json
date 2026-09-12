@@ -2,7 +2,7 @@
   {
     "packageName": "com.anva.anihub",
     "name": "AniHub UA",
-    "version": 2,
+    "version": 3,
     "baseUrl": "https://anihub.in.ua",
     "description": "AniHub - українське аніме для SkyStream",
     "authors": [
@@ -14,6 +14,6 @@
     "categories": [
       "Anime"
     ],
-    "url": "https://raw.githubusercontent.com/mpulsea/anihubua-sstream/main/dist/com.anva.anihub-v2.sky"
+    "url": "https://raw.githubusercontent.com/mpulsea/anihubua-sstream/main/dist/com.anva.anihub-v3.sky"
   }
 ]
