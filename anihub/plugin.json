@@ -1,7 +1,7 @@
 {
   "packageName": "com.anva.anihub",
   "name": "AniHub UA",
-  "version": 2,
+  "version": 3,
   "baseUrl": "https://anihub.in.ua",
   "description": "AniHub - українське аніме для SkyStream",
   "authors": [
